@@ -70,7 +70,6 @@ app.post("/singin", async (req, res) => {
   let new_pass = req.body.pass;
   let user_found;
 
-  
   try {
     user_found = await User.find({ username: new_user });
   } catch (error) {
@@ -79,19 +78,22 @@ app.post("/singin", async (req, res) => {
     });
   }
 
-  if (user_found.length == 0) { //comprobar si existe el nombre de usuario
-    if (new_pass.length < 8) { //comprobar si la contraseña es buena
+  if (user_found.length == 0) {
+    //comprobar si existe el nombre de usuario
+    if (new_pass.length < 8) {
+      //comprobar si la contraseña es buena
       res.json({
         found: true, //cuidadito
         message: "La contraseña es demasiado corta",
         userName: null,
         userPass: null,
       });
-    } else { //añadir usuario
-      //encriptar contraseña
-      let new_pass_cryp = bcrypt.hashSync(new_pass, salt)
+    } else {
       //añadir usuario
-      let newUser = {username: new_user, password:new_pass_cryp,notes:[]}
+      //encriptar contraseña
+      let new_pass_cryp = bcrypt.hashSync(new_pass, salt);
+      //añadir usuario
+      let newUser = { username: new_user, password: new_pass_cryp, notes: [] };
       let doc;
       try {
         doc = await User.create(newUser);
@@ -109,7 +111,6 @@ app.post("/singin", async (req, res) => {
       });
     }
     return;
-
   } else {
     res.json({
       found: true,
@@ -119,33 +120,36 @@ app.post("/singin", async (req, res) => {
     });
     return;
   }
-
 });
 
 ////ruta notas (se muestra un listado con el titulo y la fecha de la nota)
-app.get("/getNotes/:userid", async (req, res) => { //req: lo que llega del cliente res: lo que le envias al cliente
-  
+app.get("/getNotes/:userid", async (req, res) => {
+  //req: lo que llega del cliente res: lo que le envias al cliente
+
   let userID = req.params.userid;
-  let user = await User.findOne({_id: userID},{password:0}).populate("notes",{usernote:0}).sort({updatedAt: -1});
-  
+  let user = await User.findOne({ _id: userID }, { password: 0 })
+    .populate("notes", { usernote: 0 })
+    .sort({ updatedAt: -1 });
+
   res.json({
-    userNotes: user
-  });  
-})
+    userNotes: user,
+  });
+});
 
 ////ruta nueva nota
-app.post("/newnote/:userid", async (req, res) => { 
+app.post("/newnote/:userid", async (req, res) => {
   //añadir una nueva nota a un usuario:
-    //crear nueva nota en bbdd notes
-    //buscar usuario en bbdd user
-    //push del id de notas al array de notaas
+  //crear nueva nota en bbdd notes
+  //buscar usuario en bbdd user
+  //push del id de notas al array de notaas
 
   let user_id = req.params.userid;
   let user_note = req.body.note;
   let doc;
-  try { //crear nota en bbdd notes
-    doc = await Note.create({usernote:user_note});
-    console.log(doc)
+  try {
+    //crear nota en bbdd notes
+    doc = await Note.create({ usernote: user_note });
+    console.log(doc);
   } catch (error) {
     return res.status(500).json({
       message: "Error del servidor",
@@ -168,43 +172,45 @@ app.post("/newnote/:userid", async (req, res) => {
   }
 
   res.json({
-    message: "nota creada"
-  })
-    
-})
+    message: "nota creada",
+  });
+});
 
 //ruta nota usuarioS
 app.get("/note/:noteid", async (req, res) => {
   let note_id = req.params.noteid;
-  let note = await Note.findOne({_id: note_id});
+  let note = await Note.findOne({ _id: note_id });
   res.json({
-    userNote: note
-  })
-
+    userNote: note,
+  });
 });
 
 ////ruta actualizar nota
-app.put("/upnote/:noteid", async(req,res) => {
+app.put("/upnote/:noteid", async (req, res) => {
   let note_id = req.params.noteid;
-  let update_note = req.body.update
-  let doc = await Note.findByIdAndUpdate(note_id, {usernote:update_note},{new: true})
+  let update_note = req.body.update;
+  let doc = await Note.findByIdAndUpdate(
+    note_id,
+    { usernote: update_note },
+    { new: true }
+  );
 
   res.json({
     message: "Nota actualizada",
-    upNote: doc
-  })
-})
+    upNote: doc,
+  });
+});
 
 ////ruta borrar nota
-app.delete("/deletenote/:noteid", async(req,res) => {
+app.delete("/deletenote/:noteid", async (req, res) => {
   let note_id = req.params.noteid;
   await Note.findByIdAndDelete(note_id);
+  await User.findOneAndUpdate({ $pull: { notes: note_id } });
 
   res.json({
-    message: "Nota eliminada"
-  })
-
-})
+    message: "Nota eliminada",
+  });
+});
 
 // montar servidor -->
 app.listen(5000, () => {
